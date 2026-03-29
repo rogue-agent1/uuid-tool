@@ -1,23 +1,36 @@
 #!/usr/bin/env python3
-"""UUID tool — generate v1/v4/v5, validate, parse."""
-import sys, uuid
-def parse(u):
-    u = uuid.UUID(u)
-    return {"uuid": str(u), "version": u.version, "variant": str(u.variant),
-            "hex": u.hex, "int": u.int, "bytes": len(u.bytes)}
-def cli():
-    cmd = sys.argv[1] if len(sys.argv) > 1 else "v4"
-    if cmd == "v1": print(uuid.uuid1())
-    elif cmd == "v4": print(uuid.uuid4())
-    elif cmd == "v5":
-        ns = uuid.NAMESPACE_DNS; name = sys.argv[2] if len(sys.argv)>2 else "example.com"
-        print(uuid.uuid5(ns, name))
-    elif cmd == "parse":
-        for k, v in parse(sys.argv[2]).items(): print(f"  {k}: {v}")
-    elif cmd == "batch":
-        n = int(sys.argv[2]) if len(sys.argv)>2 else 5
-        for _ in range(n): print(uuid.uuid4())
-    elif cmd == "validate":
-        try: uuid.UUID(sys.argv[2]); print("Valid ✓")
-        except: print("Invalid ✗")
-if __name__ == "__main__": cli()
+"""uuid_tool - Generate and parse UUIDs."""
+import sys, argparse, json, uuid, time
+
+def parse_uuid(s):
+    u = uuid.UUID(s)
+    info = {"uuid": str(u), "version": u.version, "variant": str(u.variant), "hex": u.hex, "int": u.int, "bytes": len(u.bytes)}
+    if u.version == 1:
+        ts = (u.time - 0x01b21dd213814000) / 1e7
+        info["timestamp"] = ts
+        info["node"] = hex(u.node)
+    return info
+
+def main():
+    p = argparse.ArgumentParser(description="UUID tool")
+    sub = p.add_subparsers(dest="cmd")
+    g = sub.add_parser("generate"); g.add_argument("-v", type=int, default=4, choices=[1,3,4,5])
+    g.add_argument("-n", type=int, default=1); g.add_argument("--name", default="")
+    g.add_argument("--namespace", default="dns", choices=["dns","url","oid","x500"])
+    pr = sub.add_parser("parse"); pr.add_argument("uuid")
+    args = p.parse_args()
+    ns_map = {"dns": uuid.NAMESPACE_DNS, "url": uuid.NAMESPACE_URL, "oid": uuid.NAMESPACE_OID, "x500": uuid.NAMESPACE_X500}
+    if args.cmd == "generate":
+        uuids = []
+        for _ in range(args.n):
+            if args.v == 1: u = uuid.uuid1()
+            elif args.v == 3: u = uuid.uuid3(ns_map[args.namespace], args.name)
+            elif args.v == 4: u = uuid.uuid4()
+            elif args.v == 5: u = uuid.uuid5(ns_map[args.namespace], args.name)
+            uuids.append(str(u))
+        print(json.dumps({"version": args.v, "uuids": uuids}))
+    elif args.cmd == "parse":
+        print(json.dumps(parse_uuid(args.uuid), indent=2))
+    else: p.print_help()
+
+if __name__ == "__main__": main()

@@ -1,6 +1,6 @@
-# uuid_tool
+# uuid-tool
 
-UUID generator and parser — v1, v4, v5, validate
+UUID generator and parser
 
 ## Usage
 
@@ -8,6 +8,7 @@ UUID generator and parser — v1, v4, v5, validate
 python3 uuid_tool.py --help
 ```
 
-## License
+## Features
 
-MIT
+- Zero dependencies (Python 3.8+)
+- Single file implementation
